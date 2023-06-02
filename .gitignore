@@ -1,0 +1,4 @@
+# Stuff
+data/
+__pycache__/*
+.idea/

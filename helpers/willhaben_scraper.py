@@ -5,6 +5,7 @@ those into csv files.
 """
 import json
 import os
+from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
@@ -37,6 +38,25 @@ _PROPERTIES = [
 ]
 
 _OUTFILE = Path(path_util.DATA_DIR, 'willhaben_scrape.csv')
+
+
+@dataclass
+class WillhabenListing:
+    postcode: int
+    state: str
+    country: str
+    heading: str
+    body_dyn: str
+    property_type: str
+    property_type_flat: bool
+    location_quality: float
+    estate_size_living_area: float
+    floor: int
+    number_of_rooms: int
+    rooms: int
+    rent_per_month_lettings: float
+    price: float
+    published: int
 
 
 class WillhabenSpider(scrapy.Spider):
