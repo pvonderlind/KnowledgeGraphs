@@ -1,6 +1,7 @@
 <script>
 import MapComponent from './components/MapComponent.vue';
 import ListingComponent from './components/ListingComponent.vue';
+
 export default {
   name: 'App',
   components: {
