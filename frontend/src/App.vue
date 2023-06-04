@@ -1,25 +1,22 @@
 <script>
 import MapComponent from './components/MapComponent.vue';
-import ListingComponent from './components/ListingComponent.vue';
 
 export default {
   name: 'App',
   components: {
-    MapComponent,
-    ListingComponent
+    MapComponent
   }
 }
 </script>
 
 <template>
   <div id="app">
-    <ListingComponent/>
     <MapComponent/>
   </div>
 </template>
 
 <style>
-#app {
+ #app {
   display: flex;
   flex-direction: column;
 }
