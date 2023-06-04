@@ -9,7 +9,6 @@
     components: {},
     data () {
       return {
-        listings: [],
         numberOfListings: 0,
         error_text: '',
         error: false,
@@ -29,6 +28,13 @@
           accessToken: import.meta.env.VITE_MAPBOX,
       }).addTo(map);
       })
+      const listings = ref([]);
+
+      const markers = ref([]);
+      const addMarker = (listing) => {
+        leaflet.marker([listing.LATITUDE, listing.LONGITUDE]).addTo(map);
+      }
+      return {listings, addMarker}
     },
     mounted() {
       axios.get("http://localhost:8000/api/listings/all", {
@@ -49,7 +55,7 @@
       <div class="container text-center">
           <div class="row row-cols-5">
               <div v-for="l in listings.slice(0, 5)" :key='l.HEADING' class="card">
-                  <div class="card-body" @click="add_marker(l)">
+                  <div class="card-body" @click="addMarker(l)">
                       <h5 class="card-title">{{ l.PRICE }} EUR</h5>
                       <h6 class="card-subtitle mb-2 text-body-secondary"> {{ l.HEADING }}</h6>
                       <p class="card-text">{{ l.POSTCODE }}</p>
