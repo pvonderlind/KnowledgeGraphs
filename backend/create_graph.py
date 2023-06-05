@@ -6,12 +6,16 @@ import math
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
+from pykeen import pipeline, triples
 
 willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'), header=0, index_col=0).reset_index()
 willhaben_data = willhaben_data.rename(columns = {'index':'id'})
 wiener_linien_stops = pd.read_csv(Path(path_util.DATA_DIR, 'wiener_linien_gtfs/stops.txt'), sep=',', header=0, index_col=0)
 
 GRAPH_SAVE_DIR = Path(path_util.DATA_DIR, 'kg_edgelist.csv')
+PYKEEN_DIR = Path(path_util.DATA_DIR, 'pykeen/')
+N_EPOCHS = 100
+PYKEEN_MODEL = 'TransE'
 
 # Greenwhich coordinate origin
 origin = [51.4825766, -0.0076589]
@@ -63,17 +67,38 @@ def _regenerate_edgelist() -> pd.DataFrame:
     # We drop duplicates as stations have multiple stops and we don't care which of them is accessible if one is!
     return pd.DataFrame({'source':sources, 'target':targets, 'edge':edges}).drop_duplicates()
 
-if os.path.exists(GRAPH_SAVE_DIR):
-    print(f"Loading saved edgelist from {GRAPH_SAVE_DIR}")
-    kg_df = pd.read_csv(GRAPH_SAVE_DIR, header=0)
-else:
-    print(f"Generating edgelist and saving to {GRAPH_SAVE_DIR}")
-    kg_df = _regenerate_edgelist()
-    kg_df.to_csv(GRAPH_SAVE_DIR, header=True, index=False)
+def _load_edgelist_df() -> pd.DataFrame:
+    if os.path.exists(GRAPH_SAVE_DIR):
+        print(f"Loading saved edgelist from {GRAPH_SAVE_DIR}")
+        kg_df = pd.read_csv(GRAPH_SAVE_DIR, header=0)
+    else:
+        print(f"Generating edgelist and saving to {GRAPH_SAVE_DIR}")
+        kg_df = _regenerate_edgelist()
+        kg_df.to_csv(GRAPH_SAVE_DIR, header=True, index=False)
+    return kg_df
 
-# G = nx.from_pandas_edgelist(kg_df, 'source', 'target', create_using=nx.MultiDiGraph(), edge_attr=True)
-# plt.figure(figsize=(12,12))
-# pos = nx.spring_layout(G)
-# nx.draw(G, pos=pos, with_labels=True, node_color='skyblue', edge_cmap=plt.cm.Blues)
-# nx.draw_networkx_edge_labels(G, pos=pos)
-# plt.show()
+def _get_splits_pykeen(df: pd.DataFrame) -> tuple:
+    np_triples = df.to_numpy(dtype=str)
+    tf = triples.TriplesFactory.from_labeled_triples(np_triples)
+    training, testing, validation = tf.split([.8, .1, .1])
+    return training, testing, validation
+
+def train_pykeen_model(training, testing, validation):
+    result = pipeline.pipeline(
+        training=training,
+        testing=testing,
+        validation=validation,
+        model=PYKEEN_MODEL,
+        stopper='early',
+        epochs=N_EPOCHS
+    )
+    result.save_to_directory(PYKEEN_DIR)
+    return result
+
+if __name__ == "__main__":
+    kg_df = _load_edgelist_df()
+    train, test, val = _get_splits_pykeen(kg_df)
+    result = train_pykeen_model(train, test, val)
+
+
+
