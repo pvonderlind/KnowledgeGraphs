@@ -9,10 +9,8 @@
     components: {},
     data () {
       return {
-        numberOfListings: 0,
         error_text: '',
-        error: false,
-        markers: [],
+        error: false
       }
     },
     setup() {
@@ -28,20 +26,29 @@
           accessToken: import.meta.env.VITE_MAPBOX,
       }).addTo(map);
       })
+      const stops = ref([]);
       const listings = ref([]);
-
-      const markers = ref([]);
       const addMarker = (listing) => {
         leaflet.marker([listing.LATITUDE, listing.LONGITUDE]).addTo(map);
       }
-      return {listings, addMarker}
+      const addStop = (stop) => {
+        leaflet.marker([stop.stop_lat, stop.stop_lon]).addTo(map);
+      }
+      return {listings, stops, addMarker, addStop}
     },
     mounted() {
       axios.get("http://localhost:8000/api/listings/all", {
             headers: {'Content-Type': 'application/json'}
       }).then(response => {
-            this.listings = JSON.parse(response.data);
-            this.numberOfListings = this.listings.length;
+        this.listings = JSON.parse(response.data);
+      });
+      axios.get("http://localhost:8000/api/stops/all", {
+        headers: {'Content-Type': 'application/json'}
+      }).then(response => {
+        this.stops = JSON.parse(response.data);
+        for (var i = 0; i < this.stops.length; i++) {
+          this.addStop(this.stops[i]);
+        }
       });
     }
   }
