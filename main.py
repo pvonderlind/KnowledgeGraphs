@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
-from helpers import path_util
+from backend.helpers import path_util
 from pathlib import Path
 
 app = FastAPI()
-willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'))
-wiener_linien_stops = pd.read_csv(Path(path_util.DATA_DIR, 'wiener_linien_gtfs/stops.txt'), sep=',', header=0)
+willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'), index_col=0)
+wiener_linien_stops = pd.read_csv(Path(path_util.DATA_DIR, 'wiener_linien_gtfs/stops.txt'), sep=',', header=0, index_col=0)
 
 origins = [
     'http://localhost:8000',
