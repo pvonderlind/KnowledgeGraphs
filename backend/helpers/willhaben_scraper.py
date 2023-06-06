@@ -35,6 +35,9 @@ _PROPERTIES = [
     "PRICE",
 
     "PUBLISHED",
+
+    "LATITUDE",
+    "LONGITUDE"
 ]
 
 _OUTFILE = Path(path_util.DATA_DIR, 'willhaben_scrape.csv')
@@ -61,8 +64,8 @@ class WillhabenListing:
 
 class WillhabenSpider(scrapy.Spider):
     name = 'willhaben'
-    base_url = 'https://www.willhaben.at/iad/immobilien/mietwohnungen/wien?rows=30'
-    n_pages = 2
+    base_url = 'https://www.willhaben.at/iad/immobilien/mietwohnungen/wien'
+    n_pages = 20
 
     def start_requests(self):
         start_urls = [f"{self.base_url}?page={i}" for i in range(1, self.n_pages + 1)]
@@ -73,8 +76,8 @@ class WillhabenSpider(scrapy.Spider):
         data_str = response.xpath('//script[@id="__NEXT_DATA__"]/text()').get()
         data_json = json.loads(data_str)['props']['pageProps']['searchResult']
         flats = self._process_script_tag_data(data_json)
-        df = pd.DataFrame(flats)
-        df.to_csv(_OUTFILE, mode='a', header=not os.path.exists(_OUTFILE))
+        df = pd.DataFrame(flats, columns=_PROPERTIES)
+        df.to_csv(_OUTFILE, mode='a', header=not os.path.exists(_OUTFILE), index=False)
 
     def _process_script_tag_data(self, data_json: dict) -> list[dict]:
         """
@@ -91,7 +94,7 @@ class WillhabenSpider(scrapy.Spider):
             flat_properties = {}
             for attribute in advert['attributes']['attribute']:
                 if attribute['name'] in _PROPERTIES:
-                    flat_properties[attribute['name']] = "||".join(attribute['values'])
+                    flat_properties[attribute['name']] = "||||".join(attribute['values'])
 
             if 'COORDINATES' not in flat_properties:
                 continue

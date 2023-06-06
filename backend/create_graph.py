@@ -1,4 +1,6 @@
+from typing import List
 import networkx as nx
+import numpy as np
 import pandas as pd
 from pathlib import Path
 from helpers import path_util
@@ -6,15 +8,19 @@ import math
 from tqdm import tqdm
 import matplotlib.pyplot as plt
 import os
-from pykeen import pipeline, triples
+from pykeen import pipeline, triples, predict, nn
+from sklearn.cluster import KMeans
+import torch
 
-willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'), header=0, index_col=0).reset_index()
+willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'), header=0).reset_index()
 willhaben_data = willhaben_data.rename(columns = {'index':'id'})
+willhaben_data = willhaben_data.drop_duplicates()
 wiener_linien_stops = pd.read_csv(Path(path_util.DATA_DIR, 'wiener_linien_gtfs/stops.txt'), sep=',', header=0, index_col=0)
 
-GRAPH_SAVE_DIR = Path(path_util.DATA_DIR, 'kg_edgelist.csv')
+GRAPH_SAVE_PATH = Path(path_util.DATA_DIR, 'kg_edgelist.csv')
 PYKEEN_DIR = Path(path_util.DATA_DIR, 'pykeen/')
-N_EPOCHS = 100
+CLUSTER_PATH = Path(path_util.DATA_DIR, 'clusters.npy')
+N_EPOCHS = 20
 PYKEEN_MODEL = 'TransE'
 
 # Greenwhich coordinate origin
@@ -68,37 +74,52 @@ def _regenerate_edgelist() -> pd.DataFrame:
     return pd.DataFrame({'source':sources, 'target':targets, 'edge':edges}).drop_duplicates()
 
 def _load_edgelist_df() -> pd.DataFrame:
-    if os.path.exists(GRAPH_SAVE_DIR):
-        print(f"Loading saved edgelist from {GRAPH_SAVE_DIR}")
-        kg_df = pd.read_csv(GRAPH_SAVE_DIR, header=0)
+    if os.path.exists(GRAPH_SAVE_PATH):
+        print(f"Loading saved edgelist from {GRAPH_SAVE_PATH}")
+        kg_df = pd.read_csv(GRAPH_SAVE_PATH, header=0)
     else:
-        print(f"Generating edgelist and saving to {GRAPH_SAVE_DIR}")
+        print(f"Generating edgelist and saving to {GRAPH_SAVE_PATH}")
         kg_df = _regenerate_edgelist()
-        kg_df.to_csv(GRAPH_SAVE_DIR, header=True, index=False)
+        kg_df.to_csv(GRAPH_SAVE_PATH, header=True, index=False)
     return kg_df
 
 def _get_splits_pykeen(df: pd.DataFrame) -> tuple:
     np_triples = df.to_numpy(dtype=str)
     tf = triples.TriplesFactory.from_labeled_triples(np_triples)
     training, testing, validation = tf.split([.8, .1, .1])
-    return training, testing, validation
+    return training, testing, validation, tf
 
 def train_pykeen_model(training, testing, validation):
-    result = pipeline.pipeline(
-        training=training,
-        testing=testing,
-        validation=validation,
-        model=PYKEEN_MODEL,
-        stopper='early',
-        epochs=N_EPOCHS
-    )
-    result.save_to_directory(PYKEEN_DIR)
-    return result
+    if not os.path.exists(PYKEEN_DIR):
+        print("Training new pykeen model ...")
+        result = pipeline.pipeline(
+            training=training,
+            testing=testing,
+            validation=validation,
+            model=PYKEEN_MODEL,
+            stopper='early',
+            epochs=N_EPOCHS
+        )
+        result.save_to_directory(PYKEEN_DIR)
+        return result.model
+    else:
+        print('Loading saved pykeen model ...')
+        return torch.load(Path(PYKEEN_DIR,'trained_model.pkl'))
+
+def k_mean_cluster_embeddings(model, k: int = 8) -> np.ndarray:
+    entity_embeddings = model.entity_representations[0](indices=None).detach().numpy()
+    cluster_assignments = KMeans(n_clusters=k, random_state=0, n_init='auto').fit_predict(entity_embeddings)
+    return cluster_assignments
+
+
 
 if __name__ == "__main__":
     kg_df = _load_edgelist_df()
-    train, test, val = _get_splits_pykeen(kg_df)
-    result = train_pykeen_model(train, test, val)
+    train, test, val, full = _get_splits_pykeen(kg_df)
+    model = train_pykeen_model(train, test, val)
+    clusters = k_mean_cluster_embeddings(model)
+    with open(CLUSTER_PATH, 'wb') as f:
+        np.save(f, clusters)
 
 
 
