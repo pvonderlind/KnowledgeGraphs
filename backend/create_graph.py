@@ -118,6 +118,8 @@ if __name__ == "__main__":
     train, test, val, full = _get_splits_pykeen(kg_df)
     model = train_pykeen_model(train, test, val)
     clusters = k_mean_cluster_embeddings(model)
+    print(clusters.shape)
+    print(clusters)
     with open(CLUSTER_PATH, 'wb') as f:
         np.save(f, clusters)
 

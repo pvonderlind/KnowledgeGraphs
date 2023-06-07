@@ -10,7 +10,8 @@
     data () {
       return {
         error_text: '',
-        error: false
+        error: false,
+        showStops: false
       }
     },
     setup() {
@@ -28,13 +29,32 @@
       })
       const stops = ref([]);
       const listings = ref([]);
+      const clusters = ref([]);
+      const similarSelected = ref([]);
+      const markers = [];
+
       const addMarker = (listing) => {
-        leaflet.marker([listing.LATITUDE, listing.LONGITUDE]).addTo(map);
+        const l_id = `${listing.LATITUDE},${listing.LONGITUDE}`
+        if (!markers.includes(l_id)) {
+          leaflet.marker([listing.LATITUDE, listing.LONGITUDE]).addTo(map);
+          markers.push(l_id);
+        }
+        map.flyTo([listing.LATITUDE, listing.LONGITUDE], 15);
       }
       const addStop = (stop) => {
-        leaflet.marker([stop.stop_lat, stop.stop_lon]).addTo(map);
+        const transicon = leaflet.icon({
+          iconUrl: './src/assets/transit.jpg',
+          iconSize: [10, 10]
+        });
+        //leaflet.marker([stop.stop_lat, stop.stop_lon]).addTo(map);
       }
-      return {listings, stops, addMarker, addStop}
+      const showSimilar = (listing) => {
+        const cls = clusters.value;
+        const assigned_cluster = cls[listing.id];
+        const similar_listings = listings.value.filter(l => cls[l.id] == assigned_cluster);
+        similarSelected.value.push(similar_listings.slice(0, 5));
+      }
+      return {listings, stops, clusters, markers, similarSelected, addMarker, addStop, showSimilar}
     },
     mounted() {
       axios.get("http://localhost:8000/api/listings/all", {
@@ -50,6 +70,11 @@
           this.addStop(this.stops[i]);
         }
       });
+      axios.get("http://localhost:8000/api/clusters/all", {
+        headers: {'Content-Type': 'application/json'}
+      }).then(response => {
+        this.clusters = JSON.parse(response.data);
+      });
     }
   }
 </script>
@@ -62,16 +87,19 @@
       <div class="container text-center">
           <div class="row row-cols-5">
               <div v-for="l in listings.slice(0, 5)" :key='l.HEADING' class="card">
-                  <div class="card-body" @click="addMarker(l)">
+                  <div id='card-listing' class="card-body">
                       <h5 class="card-title">{{ l.PRICE }} EUR</h5>
-                      <h6 class="card-subtitle mb-2 text-body-secondary"> {{ l.HEADING }}</h6>
+                      <h6 id='text-heading' class="card-subtitle mb-2 text-body-secondary"> {{ l.HEADING }}</h6>
                       <p class="card-text">{{ l.POSTCODE }}</p>
+                        <div id="btn-row">
+                          <button type="button" class="btn btn-success" @click="addMarker(l)">Add</button>
+                          <button id='similar-btn' type="button" class="btn btn-primary" @click="showSimilar(l)" data-toggle="modal" data-target="#myModal">Show similar</button>
+                        </div>
                   </div>
               </div>
           </div>
       </div>
     </div>
-
     <div id="map"></div>
 </template>
 
@@ -79,7 +107,16 @@
 body {
   margin: 0;
 }
+#card-listing {
+  display: flex;
+  justify-content: flex-end;
+  flex-direction: column;
+}
+#btn-row {
+  display: flex;
+  flex-direction: row;
+}
 #map {
-  height: 400px;
+  height:80vw;
 }
 </style>

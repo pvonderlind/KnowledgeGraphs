@@ -3,12 +3,15 @@ from fastapi.middleware.cors import CORSMiddleware
 import pandas as pd
 from backend.helpers import path_util
 from pathlib import Path
+import numpy as np
+import json
 
 app = FastAPI()
 willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'), header=0).reset_index()
 willhaben_data = willhaben_data.rename(columns = {'index':'id'})
 willhaben_data = willhaben_data.drop_duplicates()
 wiener_linien_stops = pd.read_csv(Path(path_util.DATA_DIR, 'wiener_linien_gtfs/stops.txt'), sep=',', header=0, index_col=0)
+entity_clusters = np.load
 
 origins = [
     'http://localhost:8000',
@@ -31,3 +34,7 @@ def get_all_listings():
 @app.get('/api/stops/all')
 def get_all_stops():
     return wiener_linien_stops.to_json(orient='records')
+
+@app.get('/api/clusters/all')
+def get_all_clusters():
+    return json.dumps(np.load(Path(path_util.DATA_DIR, 'clusters.npy')).tolist())
