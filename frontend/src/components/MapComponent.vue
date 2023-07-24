@@ -87,7 +87,9 @@
       axios.get("http://localhost:8000/api/listings/all", {
             headers: {'Content-Type': 'application/json'}
       }).then(response => {
-        this.listings = JSON.parse(response.data);
+        //this.listings = JSON.parse(response.data);
+        this.listings = response.data;
+        console.log(typeof this.listings);
       });
       axios.get("http://localhost:8000/api/stops/all", {
         headers: {'Content-Type': 'application/json'}
