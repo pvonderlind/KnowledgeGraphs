@@ -17,9 +17,6 @@ if RE_INIT_DB:
 db = neo4j_driver.WillhabenDriver()
 
 app = FastAPI()
-willhaben_data = pd.read_csv(Path(path_util.DATA_DIR, 'willhaben_scrape.csv'), header=0).reset_index()
-willhaben_data = willhaben_data.rename(columns = {'index':'id'})
-willhaben_data = willhaben_data.drop_duplicates()
 wiener_linien_stops = pd.read_csv(Path(path_util.DATA_DIR, 'wiener_linien_gtfs/stops.txt'), sep=',', header=0, index_col=0)
 
 
