@@ -96,15 +96,16 @@ def _add_logical_edges() -> pd.DataFrame:
     return pd.DataFrame({'source':sources, 'target':targets, 'edge':edges}).drop_duplicates()
 
 def _load_edgelist_df() -> pd.DataFrame:
-    # if os.path.exists(GRAPH_SAVE_PATH):
-    #     print(f"Loading saved edgelist from {GRAPH_SAVE_PATH}")
-    #     kg_df = pd.read_csv(GRAPH_SAVE_PATH, header=0)
+    if os.path.exists(GRAPH_SAVE_PATH):
+        print(f"Loading saved edgelist from {GRAPH_SAVE_PATH}")
+        kg_df = pd.read_csv(GRAPH_SAVE_PATH, header=0)
+    else:
+        print(f"Please export the edges from Neo4J as RDF triples to {GRAPH_SAVE_PATH}!")
     # else:
     #     print(f"Generating edgelist and saving to {GRAPH_SAVE_PATH}")
     #     kg_df = _regenerate_edgelist()
     #     kg_df.to_csv(GRAPH_SAVE_PATH, header=True, index=False)
-    # return kg_df
-    pass
+    return kg_df
 
 def _get_splits_pykeen(df: pd.DataFrame) -> tuple:
     np_triples = df.to_numpy(dtype=str)
@@ -137,12 +138,11 @@ def k_mean_cluster_embeddings(model, k: int = 8) -> np.ndarray:
 
 
 if __name__ == "__main__":
-    # kg_df = _load_edgelist_df()
-    # train, test, val, full = _get_splits_pykeen(kg_df)
-    # model = train_pykeen_model(train, test, val)
-    # clusters = k_mean_cluster_embeddings(model)
-    # print(clusters.shape)
-    # print(clusters)
-    # with open(CLUSTER_PATH, 'wb') as f:
-    #     np.save(f, clusters)
-    pass
+    kg_df = _load_edgelist_df()
+    train, test, val, full = _get_splits_pykeen(kg_df)
+    model = train_pykeen_model(train, test, val)
+    clusters = k_mean_cluster_embeddings(model)
+    print(clusters.shape)
+    print(clusters)
+    with open(CLUSTER_PATH, 'wb') as f:
+        np.save(f, clusters)
