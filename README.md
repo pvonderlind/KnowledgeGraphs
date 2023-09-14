@@ -27,3 +27,7 @@ If you want to change the connection parameters, please navigate to ```helpers/n
 ### Frontend
 
 For the frontend, you will need to install ```Vue 3 in Vite```. I recommend doing this via the Node package manager ```npm```. In theory nodejs should be included in the Conda environment, but it may be weird, so check if node is installed and then install Vue 3 in Vite.
+
+## How to access
+
+The backend runs at ```localhost:8000``` and the frontend at ```localhost:5173```. You can change them easily if you want, but beware that a few changes to the CORS configs may be necessary.
